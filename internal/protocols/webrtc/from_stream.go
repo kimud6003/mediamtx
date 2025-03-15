@@ -214,7 +214,6 @@ func setupVideoTrack(
 		}
 
 		firstReceived := false
-		var lastPTS int64
 
 		stream.AddReader(
 			reader,
@@ -229,10 +228,7 @@ func setupVideoTrack(
 
 				if !firstReceived {
 					firstReceived = true
-				} else if tunit.PTS < lastPTS {
-					return fmt.Errorf("WebRTC doesn't support H265 streams with B-frames")
-				}
-				lastPTS = tunit.PTS
+				} 
 
 				packets, err := encoder.Encode(tunit.AU)
 				if err != nil {
