@@ -52,6 +52,10 @@ COPY --from=builder /app/mediamtx /bin/mediamtx
 # 설정 파일 복사
 COPY mediamtx.yml /etc/mediamtx/mediamtx.yml
 
+COPY rtsp_process.sh /bin/rtsp_process.sh
+
+RUN chmod 777 /bin/rtsp_process.sh
+
 # 환경 변수 설정
 ENV MTX_RTSPTRANSPORTS=tcp
 
