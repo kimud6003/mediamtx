@@ -383,3 +383,22 @@ type APIRecordingList struct {
 	PageCount int             `json:"pageCount"`
 	Items     []*APIRecording `json:"items"`
 }
+
+// ThumbnailUploadRequest defines the expected JSON body for thumbnail upload.
+type ThumbnailUploadRequest struct {
+	RTSPPort                  int    `json:"rtspPort"`
+	RTSPPath                  string `json:"rtspPath"`
+	FHDImage                  string `json:"fhdImage"`
+	SmallImage                string `json:"smallImage"`
+	MinioBucket               string `json:"minioBucket"`
+	AccessKey                 string `json:"accessKey"`
+	SecretKey                 string `json:"secretKey"`
+	CameraRoiDefaultSize      string `json:"cameraRoiDefaultSize"`
+	CameraThumbnailDefaultSize string `json:"cameraThumbnailDefaultSize"`
+	CameraID                  string `json:"cameraId"`
+	CronServerHost            string `json:"cronServerHost"`
+	Organization              string `json:"organization"`
+	APIServerEndpoint         string `json:"apiServerEndpoint"`
+	VideoID                   string `json:"videoId"`
+	FilesystemID              string `json:"filesystemId"`
+}

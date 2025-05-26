@@ -32,6 +32,7 @@ import (
 	"github.com/bluenviron/mediamtx/internal/servers/rtsp"
 	"github.com/bluenviron/mediamtx/internal/servers/srt"
 	"github.com/bluenviron/mediamtx/internal/servers/webrtc"
+	// _ "github.com/bluenviron/mediamtx/docs" // swagger docs
 )
 
 //go:generate go run ./versiongetter
