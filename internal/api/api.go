@@ -132,6 +132,10 @@ func (a *API) Initialize() error {
 
 	router.Use(a.middlewareOrigin)
 	router.Use(a.middlewareAuth)
+
+	router.GET("/api-docs", func(c *gin.Context) {
+		c.Redirect(301, "/api-docs/index.html#")
+	})
 	router.GET("/api-docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	group := router.Group("/v3")
 
