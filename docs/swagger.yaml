@@ -1,0 +1,1753 @@
+definitions:
+  conf.Duration:
+    enum:
+    - -9223372036854775808
+    - 9223372036854775807
+    - 1
+    - 1000
+    - 1000000
+    - 1000000000
+    - 60000000000
+    - 3600000000000
+    type: integer
+    x-enum-varnames:
+    - minDuration
+    - maxDuration
+    - Nanosecond
+    - Microsecond
+    - Millisecond
+    - Second
+    - Minute
+    - Hour
+  conf.Global:
+    properties:
+      values: {}
+    type: object
+  conf.OptionalGlobal:
+    properties:
+      values: {}
+    type: object
+  conf.OptionalPath:
+    properties:
+      values: {}
+    type: object
+  conf.Path:
+    properties:
+      disablePublisherOverride:
+        description: deprecated
+        type: boolean
+      fallback:
+        type: string
+      maxReaders:
+        type: integer
+      name:
+        description: filled by Check()
+        type: string
+      overridePublisher:
+        description: Publisher source
+        type: boolean
+      playback:
+        description: deprecated
+        type: boolean
+      publishIPs:
+        description: deprecated
+        items:
+          $ref: '#/definitions/net.IPNet'
+        type: array
+      publishPass:
+        description: deprecated
+        type: string
+      publishUser:
+        description: Authentication (deprecated)
+        type: string
+      readIPs:
+        description: deprecated
+        items:
+          $ref: '#/definitions/net.IPNet'
+        type: array
+      readPass:
+        description: deprecated
+        type: string
+      readUser:
+        description: deprecated
+        type: string
+      record:
+        description: Record
+        type: boolean
+      recordDeleteAfter:
+        $ref: '#/definitions/conf.Duration'
+      recordFormat:
+        $ref: '#/definitions/conf.RecordFormat'
+      recordPartDuration:
+        $ref: '#/definitions/conf.Duration'
+      recordPath:
+        type: string
+      recordSegmentDuration:
+        $ref: '#/definitions/conf.Duration'
+      rpiCameraAWB:
+        type: string
+      rpiCameraAWBGains:
+        items:
+          type: number
+        type: array
+      rpiCameraAfMode:
+        type: string
+      rpiCameraAfRange:
+        type: string
+      rpiCameraAfSpeed:
+        type: string
+      rpiCameraAfWindow:
+        type: string
+      rpiCameraBitrate:
+        type: integer
+      rpiCameraBrightness:
+        type: number
+      rpiCameraCamID:
+        description: Raspberry Pi Camera source
+        type: integer
+      rpiCameraCodec:
+        type: string
+      rpiCameraContrast:
+        type: number
+      rpiCameraDenoise:
+        type: string
+      rpiCameraEV:
+        type: number
+      rpiCameraExposure:
+        type: string
+      rpiCameraFPS:
+        type: number
+      rpiCameraFlickerPeriod:
+        type: integer
+      rpiCameraGain:
+        type: number
+      rpiCameraHDR:
+        type: boolean
+      rpiCameraHFlip:
+        type: boolean
+      rpiCameraHeight:
+        type: integer
+      rpiCameraIDRPeriod:
+        type: integer
+      rpiCameraJPEGQuality:
+        type: integer
+      rpiCameraLensPosition:
+        type: number
+      rpiCameraLevel:
+        type: string
+      rpiCameraMetering:
+        type: string
+      rpiCameraMode:
+        type: string
+      rpiCameraProfile:
+        type: string
+      rpiCameraROI:
+        type: string
+      rpiCameraSaturation:
+        type: number
+      rpiCameraSecondary:
+        type: boolean
+      rpiCameraSharpness:
+        type: number
+      rpiCameraShutter:
+        type: integer
+      rpiCameraTextOverlay:
+        type: string
+      rpiCameraTextOverlayEnable:
+        type: boolean
+      rpiCameraTuningFile:
+        type: string
+      rpiCameraVFlip:
+        type: boolean
+      rpiCameraWidth:
+        type: integer
+      rtspAnyPort:
+        type: boolean
+      rtspRangeStart:
+        type: string
+      rtspRangeType:
+        $ref: '#/definitions/conf.RTSPRangeType'
+      rtspTransport:
+        allOf:
+        - $ref: '#/definitions/conf.RTSPTransport'
+        description: RTSP source
+      runOnDemand:
+        type: string
+      runOnDemandCloseAfter:
+        $ref: '#/definitions/conf.Duration'
+      runOnDemandRestart:
+        type: boolean
+      runOnDemandStartTimeout:
+        $ref: '#/definitions/conf.Duration'
+      runOnInit:
+        description: Hooks
+        type: string
+      runOnInitRestart:
+        type: boolean
+      runOnNotReady:
+        type: string
+      runOnRead:
+        type: string
+      runOnReadRestart:
+        type: boolean
+      runOnReady:
+        type: string
+      runOnReadyRestart:
+        type: boolean
+      runOnRecordSegmentComplete:
+        type: string
+      runOnRecordSegmentCreate:
+        type: string
+      runOnUnDemand:
+        type: string
+      runOnUnread:
+        type: string
+      source:
+        description: General
+        type: string
+      sourceAnyPortEnable:
+        description: deprecated
+        type: boolean
+      sourceFingerprint:
+        type: string
+      sourceOnDemand:
+        type: boolean
+      sourceOnDemandCloseAfter:
+        $ref: '#/definitions/conf.Duration'
+      sourceOnDemandStartTimeout:
+        $ref: '#/definitions/conf.Duration'
+      sourceProtocol:
+        allOf:
+        - $ref: '#/definitions/conf.RTSPTransport'
+        description: deprecated
+      sourceRedirect:
+        description: Redirect source
+        type: string
+      srtPublishPassphrase:
+        type: string
+      srtReadPassphrase:
+        type: string
+      useAbsoluteTimestamp:
+        type: boolean
+    type: object
+  conf.RTSPRangeType:
+    enum:
+    - 0
+    - 1
+    - 2
+    - 3
+    type: integer
+    x-enum-varnames:
+    - RTSPRangeTypeUndefined
+    - RTSPRangeTypeClock
+    - RTSPRangeTypeNPT
+    - RTSPRangeTypeSMPTE
+  conf.RTSPTransport:
+    properties:
+      gortsplib.Transport:
+        enum:
+        - 0
+        - 1
+        - 2
+        type: integer
+        x-enum-varnames:
+        - TransportUDP
+        - TransportUDPMulticast
+        - TransportTCP
+    type: object
+  conf.RecordFormat:
+    enum:
+    - 0
+    - 1
+    type: integer
+    x-enum-varnames:
+    - RecordFormatFMP4
+    - RecordFormatMPEGTS
+  defs.APIError:
+    properties:
+      error:
+        type: string
+    type: object
+  defs.APIHLSMuxer:
+    properties:
+      bytesSent:
+        type: integer
+      created:
+        type: string
+      lastRequest:
+        type: string
+      path:
+        type: string
+    type: object
+  defs.APIHLSMuxerList:
+    properties:
+      itemCount:
+        type: integer
+      items:
+        items:
+          $ref: '#/definitions/defs.APIHLSMuxer'
+        type: array
+      pageCount:
+        type: integer
+    type: object
+  defs.APIPath:
+    properties:
+      bytesReceived:
+        type: integer
+      bytesSent:
+        type: integer
+      confName:
+        type: string
+      name:
+        type: string
+      readers:
+        items:
+          $ref: '#/definitions/defs.APIPathSourceOrReader'
+        type: array
+      ready:
+        type: boolean
+      readyTime:
+        type: string
+      source:
+        $ref: '#/definitions/defs.APIPathSourceOrReader'
+      tracks:
+        items:
+          type: string
+        type: array
+    type: object
+  defs.APIPathConfList:
+    properties:
+      itemCount:
+        type: integer
+      items:
+        items:
+          $ref: '#/definitions/conf.Path'
+        type: array
+      pageCount:
+        type: integer
+    type: object
+  defs.APIPathList:
+    properties:
+      itemCount:
+        type: integer
+      items:
+        items:
+          $ref: '#/definitions/defs.APIPath'
+        type: array
+      pageCount:
+        type: integer
+    type: object
+  defs.APIPathSourceOrReader:
+    properties:
+      id:
+        type: string
+      type:
+        type: string
+    type: object
+  defs.APIRTMPConn:
+    properties:
+      bytesReceived:
+        type: integer
+      bytesSent:
+        type: integer
+      created:
+        type: string
+      id:
+        type: string
+      path:
+        type: string
+      query:
+        type: string
+      remoteAddr:
+        type: string
+      state:
+        $ref: '#/definitions/defs.APIRTMPConnState'
+    type: object
+  defs.APIRTMPConnList:
+    properties:
+      itemCount:
+        type: integer
+      items:
+        items:
+          $ref: '#/definitions/defs.APIRTMPConn'
+        type: array
+      pageCount:
+        type: integer
+    type: object
+  defs.APIRTMPConnState:
+    enum:
+    - idle
+    - read
+    - publish
+    type: string
+    x-enum-varnames:
+    - APIRTMPConnStateIdle
+    - APIRTMPConnStateRead
+    - APIRTMPConnStatePublish
+  defs.APIRTSPConn:
+    properties:
+      bytesReceived:
+        type: integer
+      bytesSent:
+        type: integer
+      created:
+        type: string
+      id:
+        type: string
+      remoteAddr:
+        type: string
+      session:
+        type: string
+    type: object
+  defs.APIRTSPConnsList:
+    properties:
+      itemCount:
+        type: integer
+      items:
+        items:
+          $ref: '#/definitions/defs.APIRTSPConn'
+        type: array
+      pageCount:
+        type: integer
+    type: object
+  defs.APIRTSPSession:
+    properties:
+      bytesReceived:
+        type: integer
+      bytesSent:
+        type: integer
+      created:
+        type: string
+      id:
+        type: string
+      path:
+        type: string
+      query:
+        type: string
+      remoteAddr:
+        type: string
+      rtcpPacketsInError:
+        type: integer
+      rtcpPacketsReceived:
+        type: integer
+      rtcpPacketsSent:
+        type: integer
+      rtpPacketsInError:
+        type: integer
+      rtpPacketsJitter:
+        type: number
+      rtpPacketsLost:
+        type: integer
+      rtpPacketsReceived:
+        type: integer
+      rtpPacketsSent:
+        type: integer
+      state:
+        $ref: '#/definitions/defs.APIRTSPSessionState'
+      transport:
+        type: string
+    type: object
+  defs.APIRTSPSessionList:
+    properties:
+      itemCount:
+        type: integer
+      items:
+        items:
+          $ref: '#/definitions/defs.APIRTSPSession'
+        type: array
+      pageCount:
+        type: integer
+    type: object
+  defs.APIRTSPSessionState:
+    enum:
+    - idle
+    - read
+    - publish
+    type: string
+    x-enum-varnames:
+    - APIRTSPSessionStateIdle
+    - APIRTSPSessionStateRead
+    - APIRTSPSessionStatePublish
+  defs.APIRecording:
+    properties:
+      name:
+        type: string
+      segments:
+        items:
+          $ref: '#/definitions/defs.APIRecordingSegment'
+        type: array
+    type: object
+  defs.APIRecordingList:
+    properties:
+      itemCount:
+        type: integer
+      items:
+        items:
+          $ref: '#/definitions/defs.APIRecording'
+        type: array
+      pageCount:
+        type: integer
+    type: object
+  defs.APIRecordingSegment:
+    properties:
+      start:
+        type: string
+    type: object
+  defs.APISRTConn:
+    properties:
+      byteMSS:
+        description: Maximum Segment Size (MSS), in bytes
+        type: integer
+      bytesAvailReceiveBuf:
+        description: The available space in the receiver's buffer, in bytes
+        type: integer
+      bytesAvailSendBuf:
+        description: The available space in the sender's buffer, in bytes
+        type: integer
+      bytesReceiveBuf:
+        description: Instantaneous (current) value of packetsRcvBuf, expressed in
+          bytes, including payload and all headers (IP, TCP, SRT)
+        type: integer
+      bytesReceived:
+        description: Same as packetsReceived, but expressed in bytes, including payload
+          and all the headers (IP, TCP, SRT)
+        type: integer
+      bytesReceivedBelated:
+        description: Same as PacketsReceivedBelated, but expressed in bytes, including
+          payload and all the headers (IP, TCP, SRT)
+        type: integer
+      bytesReceivedDrop:
+        description: Same as packetsReceivedDrop, but expressed in bytes, including
+          payload and all the headers (IP, TCP, SRT)
+        type: integer
+      bytesReceivedLoss:
+        description: |-
+          Same as packetsReceivedLoss, but expressed in bytes, including payload and all the headers (IP, TCP, SRT),
+          bytes for the presently missing (either reordered or lost) packets' payloads are estimated
+          based on the average packet size
+        type: integer
+      bytesReceivedRetrans:
+        description: Same as packetsReceivedRetrans, but expressed in bytes, including
+          payload and all the headers (IP, TCP, SRT)
+        type: integer
+      bytesReceivedUndecrypt:
+        description: Same as packetsReceivedUndecrypt, but expressed in bytes, including
+          payload and all the headers (IP, TCP, SRT)
+        type: integer
+      bytesReceivedUnique:
+        description: Same as packetsReceivedUnique, but expressed in bytes, including
+          payload and all the headers (IP, TCP, SRT)
+        type: integer
+      bytesRetrans:
+        description: Same as packetsRetrans, but expressed in bytes, including payload
+          and all the headers (IP, TCP, SRT)
+        type: integer
+      bytesSendBuf:
+        description: |-
+          Instantaneous (current) value of packetsSndBuf, but expressed in bytes,
+          including payload and all headers (IP, TCP, SRT)
+        type: integer
+      bytesSendDrop:
+        description: Same as packetsSendDrop, but expressed in bytes, including payload
+          and all the headers (IP, TCP, SRT)
+        type: integer
+      bytesSent:
+        description: Same as packetsSent, but expressed in bytes, including payload
+          and all the headers (IP, TCP, SRT)
+        type: integer
+      bytesSentUnique:
+        description: Same as packetsSentUnique, but expressed in bytes, including
+          payload and all the headers (IP, TCP, SRT)
+        type: integer
+      created:
+        type: string
+      id:
+        type: string
+      mbpsLinkCapacity:
+        description: Estimated capacity of the network link, in Mbps
+        type: number
+      mbpsMaxBW:
+        description: Transmission bandwidth limit, in Mbps
+        type: number
+      mbpsReceiveRate:
+        description: Current receiving bandwidth, in Mbps
+        type: number
+      mbpsSendRate:
+        description: Current transmission bandwidth, in Mbps
+        type: number
+      msRTT:
+        description: |-
+          Smoothed round-trip time (SRTT), an exponentially-weighted moving average (EWMA)
+          of an endpoint's RTT samples, in milliseconds
+        type: number
+      msReceiveBuf:
+        description: The timespan (msec) of acknowledged packets in the receiver's
+          buffer
+        type: integer
+      msReceiveTsbPdDelay:
+        description: Timestamp-based Packet Delivery Delay value set on the socket
+          via SRTO_RCVLATENCY or SRTO_LATENCY
+        type: integer
+      msSendBuf:
+        description: The timespan (msec) of packets in the sender's buffer (unacknowledged
+          packets)
+        type: integer
+      msSendTsbPdDelay:
+        description: Timestamp-based Packet Delivery Delay value of the peer
+        type: integer
+      packetsFlightSize:
+        description: The number of packets in flight
+        type: integer
+      packetsFlowWindow:
+        description: The maximum number of packets that can be "in flight"
+        type: integer
+      packetsReceiveBuf:
+        description: The number of acknowledged packets in receiver's buffer
+        type: integer
+      packetsReceived:
+        description: The total number of received DATA packets, including retransmitted
+          packets
+        type: integer
+      packetsReceivedACK:
+        description: The total number of received ACK (Acknowledgement) control packets
+        type: integer
+      packetsReceivedAvgBelatedTime:
+        description: Accumulated difference between the current time and the time-to-play
+          of a packet that is received late
+        type: integer
+      packetsReceivedBelated:
+        description: ??
+        type: integer
+      packetsReceivedDrop:
+        description: |-
+          The total number of dropped by the SRT receiver and, as a result,
+          not delivered to the upstream application DATA packets
+        type: integer
+      packetsReceivedKM:
+        description: The total number of received KM (Key Material) control packets
+        type: integer
+      packetsReceivedLoss:
+        description: The total number of SRT DATA packets detected as presently missing
+          (either reordered or lost) at the receiver side
+        type: integer
+      packetsReceivedLossRate:
+        description: Percentage of retransmitted data vs. received data
+        type: number
+      packetsReceivedNAK:
+        description: The total number of received NAK (Negative Acknowledgement) control
+          packets
+        type: integer
+      packetsReceivedRetrans:
+        description: The total number of retransmitted packets registered at the receiver
+          side
+        type: integer
+      packetsReceivedUndecrypt:
+        description: The total number of packets that failed to be decrypted at the
+          receiver side
+        type: integer
+      packetsReceivedUnique:
+        description: |-
+          The total number of unique original, retransmitted or recovered by the packet filter DATA packets
+          received in time, decrypted without errors and, as a result, scheduled for delivery to the
+          upstream application by the SRT receiver.
+        type: integer
+      packetsReorderTolerance:
+        description: Instant value of the packet reorder tolerance
+        type: integer
+      packetsRetrans:
+        description: The total number of retransmitted packets sent by the SRT sender
+        type: integer
+      packetsSendBuf:
+        description: |-
+          The number of packets in the sender's buffer that are already scheduled
+          for sending or even possibly sent, but not yet acknowledged
+        type: integer
+      packetsSendDrop:
+        description: The total number of dropped by the SRT sender DATA packets that
+          have no chance to be delivered in time
+        type: integer
+      packetsSendLoss:
+        description: |-
+          The total number of data packets considered or reported as lost at the sender side.
+          Does not correspond to the packets detected as lost at the receiver side.
+        type: integer
+      packetsSendLossRate:
+        description: Percentage of resent data vs. sent data
+        type: number
+      packetsSent:
+        description: The total number of sent DATA packets, including retransmitted
+          packets
+        type: integer
+      packetsSentACK:
+        description: The total number of sent ACK (Acknowledgement) control packets
+        type: integer
+      packetsSentKM:
+        description: The total number of sent KM (Key Material) control packets
+        type: integer
+      packetsSentNAK:
+        description: The total number of sent NAK (Negative Acknowledgement) control
+          packets
+        type: integer
+      packetsSentUnique:
+        description: The total number of unique DATA packets sent by the SRT sender
+        type: integer
+      path:
+        type: string
+      query:
+        type: string
+      remoteAddr:
+        type: string
+      state:
+        $ref: '#/definitions/defs.APISRTConnState'
+      usPacketsSendPeriod:
+        description: Current minimum time interval between which consecutive packets
+          are sent, in microseconds
+        type: number
+      usSndDuration:
+        description: |-
+          The total accumulated time in microseconds, during which the SRT sender has some data to transmit,
+          including packets that have been sent, but not yet acknowledged
+        type: integer
+    type: object
+  defs.APISRTConnList:
+    properties:
+      itemCount:
+        type: integer
+      items:
+        items:
+          $ref: '#/definitions/defs.APISRTConn'
+        type: array
+      pageCount:
+        type: integer
+    type: object
+  defs.APISRTConnState:
+    enum:
+    - idle
+    - read
+    - publish
+    type: string
+    x-enum-varnames:
+    - APISRTConnStateIdle
+    - APISRTConnStateRead
+    - APISRTConnStatePublish
+  defs.APIWebRTCSession:
+    properties:
+      bytesReceived:
+        type: integer
+      bytesSent:
+        type: integer
+      created:
+        type: string
+      id:
+        type: string
+      localCandidate:
+        type: string
+      path:
+        type: string
+      peerConnectionEstablished:
+        type: boolean
+      query:
+        type: string
+      remoteAddr:
+        type: string
+      remoteCandidate:
+        type: string
+      state:
+        $ref: '#/definitions/defs.APIWebRTCSessionState'
+    type: object
+  defs.APIWebRTCSessionList:
+    properties:
+      itemCount:
+        type: integer
+      items:
+        items:
+          $ref: '#/definitions/defs.APIWebRTCSession'
+        type: array
+      pageCount:
+        type: integer
+    type: object
+  defs.APIWebRTCSessionState:
+    enum:
+    - read
+    - publish
+    type: string
+    x-enum-varnames:
+    - APIWebRTCSessionStateRead
+    - APIWebRTCSessionStatePublish
+  defs.ThumbnailUploadRequest:
+    properties:
+      accessKey:
+        type: string
+      apiServerEndpoint:
+        type: string
+      cameraId:
+        type: string
+      cameraRoiDefaultSize:
+        type: string
+      cameraThumbnailDefaultSize:
+        type: string
+      cronServerHost:
+        type: string
+      fhdImage:
+        type: string
+      filesystemId:
+        type: string
+      minioBucket:
+        type: string
+      organization:
+        type: string
+      rtspPath:
+        type: string
+      rtspPort:
+        type: integer
+      secretKey:
+        type: string
+      smallImage:
+        type: string
+      videoId:
+        type: string
+    type: object
+  net.IPNet:
+    properties:
+      ip:
+        description: network number
+        items:
+          type: integer
+        type: array
+      mask:
+        description: network mask
+        items:
+          type: integer
+        type: array
+    type: object
+info:
+  contact: {}
+paths:
+  /v3/auth/jwks/refresh:
+    post:
+      responses:
+        "200":
+          description: OK
+      summary: Refresh JWKS public key cache
+      tags:
+      - auth
+  /v3/config/global/get:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/conf.Global'
+      summary: Get global configuration
+      tags:
+      - config
+  /v3/config/global/patch:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Global configuration patch
+        in: body
+        name: config
+        required: true
+        schema:
+          $ref: '#/definitions/conf.OptionalGlobal'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: Patch global configuration
+      tags:
+      - config
+  /v3/config/pathdefaults/get:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/conf.Path'
+      summary: Get default path configuration
+      tags:
+      - config
+  /v3/config/pathdefaults/patch:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Default path configuration patch
+        in: body
+        name: config
+        required: true
+        schema:
+          $ref: '#/definitions/conf.OptionalPath'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: Patch default path configuration
+      tags:
+      - config
+  /v3/config/paths/add/{name}:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Path name
+        in: path
+        name: name
+        required: true
+        type: string
+      - description: New path configuration
+        in: body
+        name: config
+        required: true
+        schema:
+          $ref: '#/definitions/conf.OptionalPath'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: Add a new path configuration
+      tags:
+      - config
+  /v3/config/paths/delete/{name}:
+    delete:
+      parameters:
+      - description: Path name
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/defs.APIError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: Delete a path configuration
+      tags:
+      - config
+  /v3/config/paths/get/{name}:
+    get:
+      parameters:
+      - description: Path name
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/conf.Path'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/defs.APIError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: Get a specific path configuration
+      tags:
+      - config
+  /v3/config/paths/list:
+    get:
+      parameters:
+      - description: Items per page
+        in: query
+        name: itemsPerPage
+        type: integer
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/defs.APIPathConfList'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: List all configured paths
+      tags:
+      - config
+  /v3/config/paths/patch/{name}:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Path name
+        in: path
+        name: name
+        required: true
+        type: string
+      - description: Path configuration patch
+        in: body
+        name: config
+        required: true
+        schema:
+          $ref: '#/definitions/conf.OptionalPath'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/defs.APIError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: Patch a specific path configuration
+      tags:
+      - config
+  /v3/config/paths/replace/{name}:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Path name
+        in: path
+        name: name
+        required: true
+        type: string
+      - description: Full path configuration
+        in: body
+        name: config
+        required: true
+        schema:
+          $ref: '#/definitions/conf.OptionalPath'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/defs.APIError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: Replace a specific path configuration
+      tags:
+      - config
+  /v3/hlsmuxers/get/{name}:
+    get:
+      parameters:
+      - description: Path name
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/defs.APIHLSMuxer'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/defs.APIError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: Get HLS muxer
+      tags:
+      - hls
+  /v3/hlsmuxers/list:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/defs.APIHLSMuxerList'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: List HLS muxers
+      tags:
+      - hls
+  /v3/paths/get/{name}:
+    get:
+      parameters:
+      - description: Path name
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/defs.APIPath'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/defs.APIError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: Get stream details by path
+      tags:
+      - runtime
+  /v3/paths/list:
+    get:
+      parameters:
+      - description: Items per page
+        in: query
+        name: itemsPerPage
+        type: integer
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/defs.APIPathList'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/defs.APIError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: List active stream paths
+      tags:
+      - runtime
+  /v3/recordings/deletesegment:
+    delete:
+      parameters:
+      - description: Path name
+        in: query
+        name: path
+        required: true
+        type: string
+      - description: Start time (RFC3339)
+        in: query
+        name: start
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: Delete a recording segment
+      tags:
+      - recordings
+  /v3/recordings/get/{name}:
+    get:
+      parameters:
+      - description: Path name
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/defs.APIRecording'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/defs.APIError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: Get recordings
+      tags:
+      - recordings
+  /v3/recordings/list:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/defs.APIRecordingList'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: List recordings
+      tags:
+      - recordings
+  /v3/rtmpconns/get/{id}:
+    get:
+      parameters:
+      - description: Connection UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/defs.APIRTMPConn'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/defs.APIError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: Get RTMP connection
+      tags:
+      - rtmp
+  /v3/rtmpconns/kick/{id}:
+    post:
+      parameters:
+      - description: Connection UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/defs.APIError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: Kick RTMP connection
+      tags:
+      - rtmp
+  /v3/rtmpconns/list:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/defs.APIRTMPConnList'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: List RTMP connections
+      tags:
+      - rtmp
+  /v3/rtmpsconns/get/{id}:
+    get:
+      parameters:
+      - description: Connection UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/defs.APIRTMPConn'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/defs.APIError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: Get RTMPS connection
+      tags:
+      - rtmps
+  /v3/rtmpsconns/kick/{id}:
+    post:
+      parameters:
+      - description: Connection ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/defs.APIError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: Kick RTMPS connection
+      tags:
+      - rtmps
+  /v3/rtmpsconns/list:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/defs.APIRTMPConnList'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: List RTMPS connections
+      tags:
+      - rtmps
+  /v3/rtspconns/get/{id}:
+    get:
+      parameters:
+      - description: Connection UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/defs.APIRTSPConn'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/defs.APIError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: Get RTSP connection details by ID
+      tags:
+      - rtsp
+  /v3/rtspconns/list:
+    get:
+      parameters:
+      - description: Number of items per page
+        in: query
+        name: itemsPerPage
+        type: integer
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/defs.APIRTSPConnsList'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/defs.APIError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: List RTSP connections
+      tags:
+      - rtsp
+  /v3/rtspsconns/get/{id}:
+    get:
+      parameters:
+      - description: Connection UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/defs.APIRTSPConn'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/defs.APIError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: Get RTSPS connection
+      tags:
+      - rtsps
+  /v3/rtspsconns/list:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/defs.APIRTSPConnsList'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: List RTSPS connections
+      tags:
+      - rtsps
+  /v3/rtspsessions/get/{id}:
+    get:
+      parameters:
+      - description: Session UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/defs.APIRTSPSession'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/defs.APIError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: Get RTSP session
+      tags:
+      - rtsp
+  /v3/rtspsessions/kick/{id}:
+    post:
+      parameters:
+      - description: Session UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/defs.APIError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: Kick RTSP session
+      tags:
+      - rtsp
+  /v3/rtspsessions/list:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/defs.APIRTSPSessionList'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: List RTSP sessions
+      tags:
+      - rtsp
+  /v3/rtspssessions/get/{id}:
+    get:
+      parameters:
+      - description: Session UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/defs.APIRTSPSession'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/defs.APIError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: Get RTSPS session
+      tags:
+      - rtsps
+  /v3/rtspssessions/kick/{id}:
+    post:
+      parameters:
+      - description: Session UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/defs.APIError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: Kick RTSPS session
+      tags:
+      - rtsps
+  /v3/rtspssessions/list:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/defs.APIRTSPSessionList'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: List RTSPS sessions
+      tags:
+      - rtsps
+  /v3/srtconns/get/{id}:
+    get:
+      parameters:
+      - description: Connection ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/defs.APISRTConn'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/defs.APIError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: Get SRT connection
+      tags:
+      - srt
+  /v3/srtconns/kick/{id}:
+    post:
+      parameters:
+      - description: Connection ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/defs.APIError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: Kick SRT connection
+      tags:
+      - srt
+  /v3/srtconns/list:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/defs.APISRTConnList'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: List SRT connections
+      tags:
+      - srt
+  /v3/thumbnail/upload:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Thumbnail request payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/defs.ThumbnailUploadRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/defs.APIError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: Capture thumbnails and update metadata
+      tags:
+      - thumbnail
+  /v3/webrtcsessions/get/{id}:
+    get:
+      parameters:
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/defs.APIWebRTCSession'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/defs.APIError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: Get WebRTC session
+      tags:
+      - webrtc
+  /v3/webrtcsessions/kick/{id}:
+    post:
+      parameters:
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/defs.APIError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: Kick WebRTC session
+      tags:
+      - webrtc
+  /v3/webrtcsessions/list:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/defs.APIWebRTCSessionList'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/defs.APIError'
+      summary: List WebRTC sessions
+      tags:
+      - webrtc
+swagger: "2.0"
