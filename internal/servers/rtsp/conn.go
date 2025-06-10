@@ -20,6 +20,7 @@ import (
 	"github.com/bluenviron/mediamtx/internal/externalcmd"
 	"github.com/bluenviron/mediamtx/internal/hooks"
 	"github.com/bluenviron/mediamtx/internal/logger"
+	"github.com/bluenviron/mediamtx/internal/protocols/rtsp"
 )
 
 func absoluteURL(req *base.Request, v string) string {
@@ -39,6 +40,15 @@ func credentialsProvided(req *base.Request) bool {
 	var auth headers.Authorization
 	err := auth.Unmarshal(req.Header["Authorization"])
 	return err == nil && auth.Username != ""
+}
+
+func contains(list []rtspauth.VerifyMethod, item rtspauth.VerifyMethod) bool {
+	for _, i := range list {
+		if i == item {
+			return true
+		}
+	}
+	return false
 }
 
 type connParent interface {
@@ -137,17 +147,24 @@ func (c *conn) onDescribe(ctx *gortsplib.ServerHandlerOnDescribeCtx,
 	}
 	ctx.Path = ctx.Path[1:]
 
-	req := defs.PathAccessRequest{
-		Name:  ctx.Path,
-		Query: ctx.Query,
-		IP:    c.ip(),
-		Proto: auth.ProtocolRTSP,
-		ID:    &c.uuid,
-		CustomVerifyFunc: func(expectedUser, expectedPass string) bool {
+	// CustomVerifyFunc prevents hashed credentials from working.
+	// Use it only when strictly needed.
+	var customVerifyFunc func(expectedUser, expectedPass string) bool
+	if contains(c.authMethods, rtspauth.VerifyMethodDigestMD5) {
+		customVerifyFunc = func(expectedUser, expectedPass string) bool {
 			return c.rconn.VerifyCredentials(ctx.Request, expectedUser, expectedPass)
-		},
+		}
 	}
-	req.FillFromRTSPRequest(ctx.Request)
+
+	req := defs.PathAccessRequest{
+		Name:             ctx.Path,
+		Query:            ctx.Query,
+		Proto:            auth.ProtocolRTSP,
+		ID:               &c.uuid,
+		Credentials:      rtsp.Credentials(ctx.Request),
+		IP:               c.ip(),
+		CustomVerifyFunc: customVerifyFunc,
+	}
 
 	res := c.pathManager.Describe(defs.PathDescribeReq{
 		AccessRequest: req,

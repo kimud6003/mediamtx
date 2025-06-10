@@ -213,12 +213,13 @@ func TestPathRunOnConnect(t *testing.T) {
 					u, err := url.Parse("rtmp://127.0.0.1:1935/test")
 					require.NoError(t, err)
 
-					nconn, err := net.Dial("tcp", u.Host)
+					conn := &rtmp.Client{
+						URL:     u,
+						Publish: true,
+					}
+					err = conn.Initialize(context.Background())
 					require.NoError(t, err)
-					defer nconn.Close()
-
-					_, err = rtmp.NewClientConn(nconn, u, true)
-					require.NoError(t, err)
+					defer conn.Close()
 
 				case "rtmps":
 					connType = "rtmpsConn"
@@ -226,12 +227,14 @@ func TestPathRunOnConnect(t *testing.T) {
 					u, err := url.Parse("rtmps://127.0.0.1:1936/test")
 					require.NoError(t, err)
 
-					nconn, err := tls.Dial("tcp", u.Host, &tls.Config{InsecureSkipVerify: true})
+					conn := &rtmp.Client{
+						URL:       u,
+						Publish:   true,
+						TLSConfig: &tls.Config{InsecureSkipVerify: true},
+					}
+					err = conn.Initialize(context.Background())
 					require.NoError(t, err)
-					defer nconn.Close() //nolint:errcheck
-
-					_, err = rtmp.NewClientConn(nconn, u, true)
-					require.NoError(t, err)
+					defer conn.Close()
 
 				case "srt":
 					connType = "srtConn"
@@ -436,26 +439,32 @@ func TestPathRunOnRead(t *testing.T) {
 					u, err := url.Parse("rtmp://127.0.0.1:1935/test?query=value")
 					require.NoError(t, err)
 
-					nconn, err := net.Dial("tcp", u.Host)
+					conn := &rtmp.Client{
+						URL:     u,
+						Publish: false,
+					}
+					err = conn.Initialize(context.Background())
 					require.NoError(t, err)
-					defer nconn.Close()
+					defer conn.Close()
 
-					conn, err := rtmp.NewClientConn(nconn, u, false)
-					require.NoError(t, err)
-
-					_, err = rtmp.NewReader(conn)
+					r := &rtmp.Reader{
+						Conn: conn,
+					}
+					err = r.Initialize()
 					require.NoError(t, err)
 
 				case "rtmps":
 					u, err := url.Parse("rtmps://127.0.0.1:1936/test?query=value")
 					require.NoError(t, err)
 
-					nconn, err := tls.Dial("tcp", u.Host, &tls.Config{InsecureSkipVerify: true})
+					conn := &rtmp.Client{
+						URL:       u,
+						Publish:   false,
+						TLSConfig: &tls.Config{InsecureSkipVerify: true},
+					}
+					err = conn.Initialize(context.Background())
 					require.NoError(t, err)
-					defer nconn.Close() //nolint:errcheck
-
-					conn, err := rtmp.NewClientConn(nconn, u, false)
-					require.NoError(t, err)
+					defer conn.Close()
 
 					go func() {
 						for i := uint16(0); i < 3; i++ {
@@ -474,7 +483,10 @@ func TestPathRunOnRead(t *testing.T) {
 						}
 					}()
 
-					_, err = rtmp.NewReader(conn)
+					r := &rtmp.Reader{
+						Conn: conn,
+					}
+					err = r.Initialize()
 					require.NoError(t, err)
 
 				case "srt":
@@ -827,7 +839,12 @@ func TestPathResolveSource(t *testing.T) {
 	require.NoError(t, err)
 	defer s.Close()
 
-	stream = gortsplib.NewServerStream(&s, &description.Session{Medias: []*description.Media{test.MediaH264}})
+	stream = &gortsplib.ServerStream{
+		Server: &s,
+		Desc:   &description.Session{Medias: []*description.Media{test.MediaH264}},
+	}
+	err = stream.Initialize()
+	require.NoError(t, err)
 	defer stream.Close()
 
 	p, ok := newInstance(

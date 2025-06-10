@@ -1,11 +1,5 @@
 BINARY_NAME = mediamtx
 
-ifeq ($(CHECKSUM),1)
-  define DOCKERFILE_CHECKSUM
-  RUN cd /s/binaries; for f in *; do sha256sum $$f > $$f.sha256sum; done
-  endef
-endif
-
 define DOCKERFILE_BINARIES
 FROM $(BASE_IMAGE) AS build-base
 RUN apk add --no-cache zip make git tar
@@ -52,7 +46,7 @@ RUN tar -C tmp -czf "binaries/$(BINARY_NAME)_$$(cat internal/core/VERSION)_linux
 FROM build-base AS build-linux-arm64
 ENV GOOS=linux GOARCH=arm64
 RUN go build -o "tmp/$(BINARY_NAME)"
-RUN tar -C tmp -czf "binaries/$(BINARY_NAME)_$$(cat internal/core/VERSION)_linux_arm64v8.tar.gz" --owner=0 --group=0 "$(BINARY_NAME)" mediamtx.yml LICENSE
+RUN tar -C tmp -czf "binaries/$(BINARY_NAME)_$$(cat internal/core/VERSION)_linux_arm64.tar.gz" --owner=0 --group=0 "$(BINARY_NAME)" mediamtx.yml LICENSE
 
 FROM $(BASE_IMAGE)
 COPY --from=build-windows-amd64 /s/binaries /s/binaries
@@ -62,12 +56,12 @@ COPY --from=build-darwin-arm64 /s/binaries /s/binaries
 COPY --from=build-linux-armv6 /s/binaries /s/binaries
 COPY --from=build-linux-armv7 /s/binaries /s/binaries
 COPY --from=build-linux-arm64 /s/binaries /s/binaries
-$(DOCKERFILE_CHECKSUM)
 endef
 export DOCKERFILE_BINARIES
 
 binaries:
-	echo "$$DOCKERFILE_BINARIES" | DOCKER_BUILDKIT=1 docker build . -f - \
+	echo "$$DOCKERFILE_BINARIES" | docker build . -f - \
 	-t temp
 	docker run --rm -v "$(shell pwd):/out" \
 	temp sh -c "rm -rf /out/binaries && cp -r /s/binaries /out/"
+	sudo chown -R $(shell id -u):$(shell id -g) binaries

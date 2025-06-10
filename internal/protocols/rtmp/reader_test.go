@@ -1626,14 +1626,21 @@ func TestReadTracks(t *testing.T) {
 			mrw := message.NewReadWriter(bc, bc, true)
 
 			for _, msg := range ca.messages {
-				err := mrw.Write(msg)
+				err = mrw.Write(msg)
 				require.NoError(t, err)
 			}
 
-			c := newNoHandshakeConn(&buf)
+			c := &dummyConn{
+				rw: &buf,
+			}
+			c.initialize()
 
-			r, err := NewReader(c)
+			r := &Reader{
+				Conn: c,
+			}
+			err = r.Initialize()
 			require.NoError(t, err)
+
 			tracks := r.Tracks()
 			require.Equal(t, ca.tracks, tracks)
 		})

@@ -31,6 +31,19 @@ func stringInSlice(a string, list []string) bool {
 	return false
 }
 
+// skip ConfigureRTCPReports
+func registerInterceptors(mediaEngine *webrtc.MediaEngine, interceptorRegistry *interceptor.Registry) error {
+	if err := webrtc.ConfigureNack(mediaEngine, interceptorRegistry); err != nil {
+		return err
+	}
+
+	if err := webrtc.ConfigureSimulcastExtensionHeaders(mediaEngine); err != nil {
+		return err
+	}
+
+	return webrtc.ConfigureTWCCSender(mediaEngine, interceptorRegistry)
+}
+
 // TracksAreValid checks whether tracks in the SDP are valid
 func TracksAreValid(medias []*sdp.MediaDescription) error {
 	videoTrack := false
@@ -81,6 +94,7 @@ type PeerConnection struct {
 	STUNGatherTimeout     conf.Duration
 	Publish               bool
 	OutgoingTracks        []*OutgoingTrack
+	UseAbsoluteTimestamp  bool
 	Log                   logger.Writer
 
 	wr                *webrtc.PeerConnection
@@ -88,7 +102,7 @@ type PeerConnection struct {
 	newLocalCandidate chan *webrtc.ICECandidateInit
 	connected         chan struct{}
 	failed            chan struct{}
-	done              chan struct{}
+	closed            chan struct{}
 	gatheringDone     chan struct{}
 	incomingTrack     chan trackRecvPair
 	ctx               context.Context
@@ -153,7 +167,7 @@ func (co *PeerConnection) Start() error {
 			})
 		}
 
-		for _, tr := range co.OutgoingTracks {
+		for i, tr := range co.OutgoingTracks {
 			var codecType webrtc.RTPCodecType
 			if tr.isVideo() {
 				codecType = webrtc.RTPCodecTypeVideo
@@ -163,7 +177,7 @@ func (co *PeerConnection) Start() error {
 
 			err := mediaEngine.RegisterCodec(webrtc.RTPCodecParameters{
 				RTPCodecCapability: tr.Caps,
-				PayloadType:        96,
+				PayloadType:        webrtc.PayloadType(96 + i),
 			}, codecType)
 			if err != nil {
 				return err
@@ -202,7 +216,7 @@ func (co *PeerConnection) Start() error {
 
 	interceptorRegistry := &interceptor.Registry{}
 
-	err := webrtc.RegisterDefaultInterceptors(mediaEngine, interceptorRegistry)
+	err := registerInterceptors(mediaEngine, interceptorRegistry)
 	if err != nil {
 		return err
 	}
@@ -222,7 +236,7 @@ func (co *PeerConnection) Start() error {
 	co.newLocalCandidate = make(chan *webrtc.ICECandidateInit)
 	co.connected = make(chan struct{})
 	co.failed = make(chan struct{})
-	co.done = make(chan struct{})
+	co.closed = make(chan struct{})
 	co.gatheringDone = make(chan struct{})
 	co.incomingTrack = make(chan trackRecvPair)
 
@@ -232,7 +246,7 @@ func (co *PeerConnection) Start() error {
 		for _, tr := range co.OutgoingTracks {
 			err = tr.setup(co)
 			if err != nil {
-				co.wr.Close() //nolint:errcheck
+				co.wr.GracefulClose() //nolint:errcheck
 				return err
 			}
 		}
@@ -241,7 +255,7 @@ func (co *PeerConnection) Start() error {
 			Direction: webrtc.RTPTransceiverDirectionRecvonly,
 		})
 		if err != nil {
-			co.wr.Close() //nolint:errcheck
+			co.wr.GracefulClose() //nolint:errcheck
 			return err
 		}
 
@@ -249,7 +263,7 @@ func (co *PeerConnection) Start() error {
 			Direction: webrtc.RTPTransceiverDirectionRecvonly,
 		})
 		if err != nil {
-			co.wr.Close() //nolint:errcheck
+			co.wr.GracefulClose() //nolint:errcheck
 			return err
 		}
 
@@ -266,7 +280,7 @@ func (co *PeerConnection) Start() error {
 		defer co.stateChangeMutex.Unlock()
 
 		select {
-		case <-co.done:
+		case <-co.closed:
 			return
 		default:
 		}
@@ -303,7 +317,7 @@ func (co *PeerConnection) Start() error {
 				close(co.failed)
 			}
 
-			close(co.done)
+			close(co.closed)
 		}
 	})
 
@@ -325,9 +339,21 @@ func (co *PeerConnection) Start() error {
 
 // Close closes the connection.
 func (co *PeerConnection) Close() {
+	for _, track := range co.incomingTracks {
+		track.close()
+	}
+	for _, track := range co.OutgoingTracks {
+		track.close()
+	}
+
 	co.ctxCancel()
-	co.wr.Close() //nolint:errcheck
-	<-co.done
+	co.wr.GracefulClose() //nolint:errcheck
+
+	// even if GracefulClose() should wait for any goroutine to return,
+	// we have to wait for OnConnectionStateChange to return anyway,
+	// since it is executed in an uncontrolled goroutine.
+	// https://github.com/pion/webrtc/blob/4742d1fd54abbc3f81c3b56013654574ba7254f3/peerconnection.go#L509
+	<-co.closed
 }
 
 // CreatePartialOffer creates a partial offer.
@@ -442,10 +468,11 @@ func (co *PeerConnection) GatherIncomingTracks(ctx context.Context) error {
 
 		case pair := <-co.incomingTrack:
 			t := &IncomingTrack{
-				track:     pair.track,
-				receiver:  pair.receiver,
-				writeRTCP: co.wr.WriteRTCP,
-				log:       co.Log,
+				useAbsoluteTimestamp: co.UseAbsoluteTimestamp,
+				track:                pair.track,
+				receiver:             pair.receiver,
+				writeRTCP:            co.wr.WriteRTCP,
+				log:                  co.Log,
 			}
 			t.initialize()
 			co.incomingTracks = append(co.incomingTracks, t)

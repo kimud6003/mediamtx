@@ -1,8 +1,8 @@
 package rtmp
 
 import (
+	"context"
 	"crypto/tls"
-	"net"
 	"net/url"
 	"os"
 	"testing"
@@ -38,17 +38,18 @@ func (p *dummyPath) ExternalCmdEnv() externalcmd.Environment {
 }
 
 func (p *dummyPath) StartPublisher(req defs.PathStartPublisherReq) (*stream.Stream, error) {
-	var err error
-	p.stream, err = stream.New(
-		512,
-		1460,
-		req.Desc,
-		true,
-		test.NilLogger,
-	)
+	p.stream = &stream.Stream{
+		WriteQueueSize:     512,
+		UDPMaxPayloadSize:  1472,
+		Desc:               req.Desc,
+		GenerateRTPPackets: true,
+		Parent:             test.NilLogger,
+	}
+	err := p.stream.Initialize()
 	if err != nil {
 		return nil, err
 	}
+
 	close(p.streamCreated)
 	return p.stream, nil
 }
@@ -90,8 +91,8 @@ func TestServerPublish(t *testing.T) {
 				AddPublisherImpl: func(req defs.PathAddPublisherReq) (defs.Path, error) {
 					require.Equal(t, "teststream", req.AccessRequest.Name)
 					require.Equal(t, "user=myuser&pass=mypass&param=value", req.AccessRequest.Query)
-					require.Equal(t, "myuser", req.AccessRequest.User)
-					require.Equal(t, "mypass", req.AccessRequest.Pass)
+					require.Equal(t, "myuser", req.AccessRequest.Credentials.User)
+					require.Equal(t, "mypass", req.AccessRequest.Credentials.Pass)
 					return path, nil
 				},
 			}
@@ -115,22 +116,34 @@ func TestServerPublish(t *testing.T) {
 			require.NoError(t, err)
 			defer s.Close()
 
-			u, err := url.Parse("rtmp://127.0.0.1:1935/teststream?user=myuser&pass=mypass&param=value")
+			var rawURL string
+
+			if encrypt == "tls" {
+				rawURL += "rtmps://"
+			} else {
+				rawURL += "rtmp://"
+			}
+
+			rawURL += "127.0.0.1:1935/teststream?user=myuser&pass=mypass&param=value"
+
+			u, err := url.Parse(rawURL)
 			require.NoError(t, err)
 
-			nconn, err := func() (net.Conn, error) {
-				if encrypt == "plain" {
-					return net.Dial("tcp", u.Host)
-				}
-				return tls.Dial("tcp", u.Host, &tls.Config{InsecureSkipVerify: true})
-			}()
+			conn := &rtmp.Client{
+				URL:       u,
+				TLSConfig: &tls.Config{InsecureSkipVerify: true},
+				Publish:   true,
+			}
+			err = conn.Initialize(context.Background())
 			require.NoError(t, err)
-			defer nconn.Close()
+			defer conn.Close()
 
-			conn, err := rtmp.NewClientConn(nconn, u, true)
-			require.NoError(t, err)
-
-			w, err := rtmp.NewWriter(conn, test.FormatH264, test.FormatMPEG4Audio)
+			w := &rtmp.Writer{
+				Conn:       conn,
+				VideoTrack: test.FormatH264,
+				AudioTrack: test.FormatMPEG4Audio,
+			}
+			err = w.Initialize()
 			require.NoError(t, err)
 
 			err = w.WriteH264(
@@ -147,8 +160,8 @@ func TestServerPublish(t *testing.T) {
 
 			path.stream.AddReader(
 				reader,
-				path.stream.Desc().Medias[0],
-				path.stream.Desc().Medias[0].Formats[0],
+				path.stream.Desc.Medias[0],
+				path.stream.Desc.Medias[0].Formats[0],
 				func(u unit.Unit) error {
 					require.Equal(t, [][]byte{
 						test.FormatH264.SPS,
@@ -194,23 +207,24 @@ func TestServerRead(t *testing.T) {
 			}
 			desc := &description.Session{Medias: []*description.Media{test.MediaH264}}
 
-			str, err := stream.New(
-				512,
-				1460,
-				desc,
-				true,
-				test.NilLogger,
-			)
+			strm := &stream.Stream{
+				WriteQueueSize:     512,
+				UDPMaxPayloadSize:  1472,
+				Desc:               desc,
+				GenerateRTPPackets: true,
+				Parent:             test.NilLogger,
+			}
+			err := strm.Initialize()
 			require.NoError(t, err)
 
-			path := &dummyPath{stream: str}
+			path := &dummyPath{stream: strm}
 
 			pathManager := &test.PathManager{
 				AddReaderImpl: func(req defs.PathAddReaderReq) (defs.Path, *stream.Stream, error) {
 					require.Equal(t, "teststream", req.AccessRequest.Name)
 					require.Equal(t, "user=myuser&pass=mypass&param=value", req.AccessRequest.Query)
-					require.Equal(t, "myuser", req.AccessRequest.User)
-					require.Equal(t, "mypass", req.AccessRequest.Pass)
+					require.Equal(t, "myuser", req.AccessRequest.Credentials.User)
+					require.Equal(t, "mypass", req.AccessRequest.Credentials.Pass)
 					return path, path.stream, nil
 				},
 			}
@@ -234,22 +248,32 @@ func TestServerRead(t *testing.T) {
 			require.NoError(t, err)
 			defer s.Close()
 
-			u, err := url.Parse("rtmp://127.0.0.1:1935/teststream?user=myuser&pass=mypass&param=value")
+			var rawURL string
+
+			if encrypt == "tls" {
+				rawURL += "rtmps://"
+			} else {
+				rawURL += "rtmp://"
+			}
+
+			rawURL += "127.0.0.1:1935/teststream?user=myuser&pass=mypass&param=value"
+
+			u, err := url.Parse(rawURL)
 			require.NoError(t, err)
 
-			nconn, err := func() (net.Conn, error) {
-				if encrypt == "plain" {
-					return net.Dial("tcp", u.Host)
-				}
-				return tls.Dial("tcp", u.Host, &tls.Config{InsecureSkipVerify: true})
-			}()
+			conn := &rtmp.Client{
+				URL:       u,
+				TLSConfig: &tls.Config{InsecureSkipVerify: true},
+				Publish:   false,
+			}
+			err = conn.Initialize(context.Background())
 			require.NoError(t, err)
-			defer nconn.Close()
+			defer conn.Close()
 
 			go func() {
-				str.WaitRunningReader()
+				strm.WaitRunningReader()
 
-				str.WriteUnit(desc.Medias[0], desc.Medias[0].Formats[0], &unit.H264{
+				strm.WriteUnit(desc.Medias[0], desc.Medias[0].Formats[0], &unit.H264{
 					Base: unit.Base{
 						NTP: time.Time{},
 					},
@@ -258,7 +282,7 @@ func TestServerRead(t *testing.T) {
 					},
 				})
 
-				str.WriteUnit(desc.Medias[0], desc.Medias[0].Formats[0], &unit.H264{
+				strm.WriteUnit(desc.Medias[0], desc.Medias[0].Formats[0], &unit.H264{
 					Base: unit.Base{
 						NTP: time.Time{},
 						PTS: 2 * 90000,
@@ -268,7 +292,7 @@ func TestServerRead(t *testing.T) {
 					},
 				})
 
-				str.WriteUnit(desc.Medias[0], desc.Medias[0].Formats[0], &unit.H264{
+				strm.WriteUnit(desc.Medias[0], desc.Medias[0].Formats[0], &unit.H264{
 					Base: unit.Base{
 						NTP: time.Time{},
 						PTS: 3 * 90000,
@@ -279,10 +303,10 @@ func TestServerRead(t *testing.T) {
 				})
 			}()
 
-			conn, err := rtmp.NewClientConn(nconn, u, false)
-			require.NoError(t, err)
-
-			r, err := rtmp.NewReader(conn)
+			r := &rtmp.Reader{
+				Conn: conn,
+			}
+			err = r.Initialize()
 			require.NoError(t, err)
 
 			tracks := r.Tracks()

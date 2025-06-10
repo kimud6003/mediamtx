@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/tls"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -196,17 +195,23 @@ webrtc_sessions_bytes_sent 0
 
 		go func() {
 			defer wg.Done()
+
 			u, err := url.Parse("rtmp://localhost:1935/rtmp_path")
 			require.NoError(t, err)
 
-			nconn, err := net.Dial("tcp", u.Host)
+			conn := &rtmp.Client{
+				URL:     u,
+				Publish: true,
+			}
+			err = conn.Initialize(context.Background())
 			require.NoError(t, err)
-			defer nconn.Close()
+			defer conn.Close()
 
-			conn, err := rtmp.NewClientConn(nconn, u, true)
-			require.NoError(t, err)
-
-			w, err := rtmp.NewWriter(conn, test.FormatH264, nil)
+			w := &rtmp.Writer{
+				Conn:       conn,
+				VideoTrack: test.FormatH264,
+			}
+			err = w.Initialize()
 			require.NoError(t, err)
 
 			err = w.WriteH264(2*time.Second, 2*time.Second, [][]byte{{5, 2, 3, 4}})
@@ -217,17 +222,24 @@ webrtc_sessions_bytes_sent 0
 
 		go func() {
 			defer wg.Done()
+
 			u, err := url.Parse("rtmps://localhost:1936/rtmps_path")
 			require.NoError(t, err)
 
-			nconn, err := tls.Dial("tcp", u.Host, &tls.Config{InsecureSkipVerify: true})
+			conn := &rtmp.Client{
+				URL:       u,
+				TLSConfig: &tls.Config{InsecureSkipVerify: true},
+				Publish:   true,
+			}
+			err = conn.Initialize(context.Background())
 			require.NoError(t, err)
-			defer nconn.Close() //nolint:errcheck
+			defer conn.Close()
 
-			conn, err := rtmp.NewClientConn(nconn, u, true)
-			require.NoError(t, err)
-
-			w, err := rtmp.NewWriter(conn, test.FormatH264, nil)
+			w := &rtmp.Writer{
+				Conn:       conn,
+				VideoTrack: test.FormatH264,
+			}
+			err = w.Initialize()
 			require.NoError(t, err)
 
 			err = w.WriteH264(2*time.Second, 2*time.Second, [][]byte{{5, 2, 3, 4}})
@@ -300,7 +312,8 @@ webrtc_sessions_bytes_sent 0
 			}
 
 			bw := bufio.NewWriter(publisher)
-			w := mpegts.NewWriter(bw, []*mpegts.Track{track})
+			w := &mpegts.Writer{W: bw, Tracks: []*mpegts.Track{track}}
+			err = w.Initialize()
 			require.NoError(t, err)
 
 			err = w.WriteH264(track, 0, 0, [][]byte{

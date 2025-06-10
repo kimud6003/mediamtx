@@ -91,11 +91,11 @@ func mpeg4AudioTrackFromConfig(data []byte) (*format.MPEG4Audio, error) {
 }
 
 func audioTrackFromData(msg *message.Audio) (format.Format, error) {
-	switch {
-	case msg.Codec == message.CodecMPEG1Audio:
+	switch msg.Codec {
+	case message.CodecMPEG1Audio:
 		return &format.MPEG1Audio{}, nil
 
-	case msg.Codec == message.CodecPCMA:
+	case message.CodecPCMA:
 		return &format.G711{
 			PayloadTyp: 8,
 			MULaw:      false,
@@ -108,7 +108,7 @@ func audioTrackFromData(msg *message.Audio) (format.Format, error) {
 			}(),
 		}, nil
 
-	case msg.Codec == message.CodecPCMU:
+	case message.CodecPCMU:
 		return &format.G711{
 			PayloadTyp: 0,
 			MULaw:      true,
@@ -121,7 +121,7 @@ func audioTrackFromData(msg *message.Audio) (format.Format, error) {
 			}(),
 		}, nil
 
-	case msg.Codec == message.CodecLPCM:
+	case message.CodecLPCM:
 		return &format.LPCM{
 			PayloadTyp: 96,
 			BitDepth: func() int {
@@ -270,31 +270,28 @@ func sortedKeys(m map[uint8]format.Format) []int {
 	return ret
 }
 
-// Reader is a wrapper around Conn that provides utilities to demux incoming data.
+// Reader provides functions to read incoming data.
 type Reader struct {
-	conn        *Conn
+	Conn Conn
+
 	videoTracks map[uint8]format.Format
 	audioTracks map[uint8]format.Format
 	onVideoData map[uint8]func(message.Message) error
 	onAudioData map[uint8]func(message.Message) error
 }
 
-// NewReader allocates a Reader.
-func NewReader(conn *Conn) (*Reader, error) {
-	r := &Reader{
-		conn: conn,
-	}
-
+// Initialize initializes Reader.
+func (r *Reader) Initialize() error {
 	var err error
 	r.videoTracks, r.audioTracks, err = r.readTracks()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	r.onVideoData = make(map[uint8]func(message.Message) error)
 	r.onAudioData = make(map[uint8]func(message.Message) error)
 
-	return r, nil
+	return nil
 }
 
 func (r *Reader) readTracks() (map[uint8]format.Format, map[uint8]format.Format, error) {
@@ -369,7 +366,7 @@ func (r *Reader) readTracks() (map[uint8]format.Format, map[uint8]format.Format,
 	}
 
 	for {
-		msg, err := r.conn.Read()
+		msg, err := r.Conn.Read()
 		if err != nil {
 			return nil, nil, err
 		}
@@ -762,7 +759,7 @@ func (r *Reader) OnDataLPCM(track *format.LPCM, cb OnDataLPCMFunc) {
 
 // Read reads data.
 func (r *Reader) Read() error {
-	msg, err := r.conn.Read()
+	msg, err := r.Conn.Read()
 	if err != nil {
 		return err
 	}

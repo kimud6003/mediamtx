@@ -57,6 +57,8 @@ components:
             type: string
         logFile:
           type: string
+        sysLogPrefix:
+          type: string
         readTimeout:
           type: string
         writeTimeout:
@@ -87,8 +89,16 @@ components:
             $ref: '#/components/schemas/AuthInternalUserPermission'
         authJWTJWKS:
           type: string
+        authJWTJWKSFingerprint:
+          type: string
         authJWTClaimKey:
           type: string
+        authJWTExclude:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuthInternalUserPermission'
+        authJWTInHTTPQuery:
+          type: boolean
 
         # Control API
         api:
@@ -322,6 +332,8 @@ components:
           type: string
         fallback:
           type: string
+        useAbsoluteTimestamp:
+          type: boolean
 
         # Record
         record:
@@ -360,6 +372,8 @@ components:
         # Raspberry Pi Camera source
         rpiCameraCamID:
           type: integer
+        rpiCameraSecondary:
+          type: boolean
         rpiCameraWidth:
           type: integer
         rpiCameraHeight:
@@ -432,6 +446,8 @@ components:
           type: string
         rpiCameraLevel:
           type: string
+        rpiCameraJPEGQuality:
+          type: integer
 
         # Hooks
         runOnInit:
@@ -1018,6 +1034,22 @@ components:
             $ref: '#/components/schemas/WebRTCSession'
 
 paths:
+
+  /v3/auth/jwks/refresh:
+    post:
+      operationId: authJwksRefresh
+      tags: [Authentication]
+      summary: Manually refreshes the JWT JWKS.
+      responses:
+        '200':
+          description: the request was successful.
+        '500':
+          description: server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /v3/config/global/get:
     get:
       operationId: configGlobalGet

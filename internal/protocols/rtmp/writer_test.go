@@ -40,9 +40,17 @@ func TestWriteTracks(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	c := newNoHandshakeConn(&buf)
+	c := &dummyConn{
+		rw: &buf,
+	}
+	c.initialize()
 
-	_, err := NewWriter(c, videoTrack, audioTrack)
+	w := &Writer{
+		Conn:       c,
+		VideoTrack: videoTrack,
+		AudioTrack: audioTrack,
+	}
+	err := w.Initialize()
 	require.NoError(t, err)
 
 	bc := bytecounter.NewReadWriter(&buf)

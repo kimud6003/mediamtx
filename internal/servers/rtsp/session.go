@@ -9,16 +9,18 @@ import (
 	"time"
 
 	"github.com/bluenviron/gortsplib/v4"
+	rtspauth "github.com/bluenviron/gortsplib/v4/pkg/auth"
 	"github.com/bluenviron/gortsplib/v4/pkg/base"
 	"github.com/google/uuid"
-	"github.com/pion/rtp"
 
 	"github.com/bluenviron/mediamtx/internal/auth"
 	"github.com/bluenviron/mediamtx/internal/conf"
+	"github.com/bluenviron/mediamtx/internal/counterdumper"
 	"github.com/bluenviron/mediamtx/internal/defs"
 	"github.com/bluenviron/mediamtx/internal/externalcmd"
 	"github.com/bluenviron/mediamtx/internal/hooks"
 	"github.com/bluenviron/mediamtx/internal/logger"
+	"github.com/bluenviron/mediamtx/internal/protocols/rtsp"
 	"github.com/bluenviron/mediamtx/internal/stream"
 )
 
@@ -42,22 +44,65 @@ type session struct {
 	transport       *gortsplib.Transport
 	pathName        string
 	query           string
-	decodeErrLogger logger.Writer
-	writeErrLogger  logger.Writer
+	packetsLost     *counterdumper.CounterDumper
+	decodeErrors    *counterdumper.CounterDumper
+	discardedFrames *counterdumper.CounterDumper
 }
 
 func (s *session) initialize() {
 	s.uuid = uuid.New()
 	s.created = time.Now()
 
-	s.decodeErrLogger = logger.NewLimitedLogger(s)
-	s.writeErrLogger = logger.NewLimitedLogger(s)
+	s.packetsLost = &counterdumper.CounterDumper{
+		OnReport: func(val uint64) {
+			s.Log(logger.Warn, "%d RTP %s lost",
+				val,
+				func() string {
+					if val == 1 {
+						return "packet"
+					}
+					return "packets"
+				}())
+		},
+	}
+	s.packetsLost.Start()
+
+	s.decodeErrors = &counterdumper.CounterDumper{
+		OnReport: func(val uint64) {
+			s.Log(logger.Warn, "%d decode %s",
+				val,
+				func() string {
+					if val == 1 {
+						return "error"
+					}
+					return "errors"
+				}())
+		},
+	}
+	s.decodeErrors.Start()
+
+	s.discardedFrames = &counterdumper.CounterDumper{
+		OnReport: func(val uint64) {
+			s.Log(logger.Warn, "connection is too slow, discarding %d %s",
+				val,
+				func() string {
+					if val == 1 {
+						return "frame"
+					}
+					return "frames"
+				}())
+		},
+	}
+	s.discardedFrames.Start()
 
 	s.Log(logger.Info, "created by %v", s.rconn.NetConn().RemoteAddr())
 }
 
 // Close closes a Session.
 func (s *session) Close() {
+	s.discardedFrames.Stop()
+	s.decodeErrors.Stop()
+	s.packetsLost.Stop()
 	s.rsession.Close()
 }
 
@@ -100,18 +145,25 @@ func (s *session) onAnnounce(c *conn, ctx *gortsplib.ServerHandlerOnAnnounceCtx)
 	}
 	ctx.Path = ctx.Path[1:]
 
-	req := defs.PathAccessRequest{
-		Name:    ctx.Path,
-		Query:   ctx.Query,
-		Publish: true,
-		IP:      c.ip(),
-		Proto:   auth.ProtocolRTSP,
-		ID:      &c.uuid,
-		CustomVerifyFunc: func(expectedUser, expectedPass string) bool {
+	// CustomVerifyFunc prevents hashed credentials from working.
+	// Use it only when strictly needed.
+	var customVerifyFunc func(expectedUser, expectedPass string) bool
+	if contains(c.authMethods, rtspauth.VerifyMethodDigestMD5) {
+		customVerifyFunc = func(expectedUser, expectedPass string) bool {
 			return c.rconn.VerifyCredentials(ctx.Request, expectedUser, expectedPass)
-		},
+		}
 	}
-	req.FillFromRTSPRequest(ctx.Request)
+
+	req := defs.PathAccessRequest{
+		Name:             ctx.Path,
+		Query:            ctx.Query,
+		Publish:          true,
+		Proto:            auth.ProtocolRTSP,
+		ID:               &c.uuid,
+		Credentials:      rtsp.Credentials(ctx.Request),
+		IP:               c.ip(),
+		CustomVerifyFunc: customVerifyFunc,
+	}
 
 	path, err := s.pathManager.AddPublisher(defs.PathAddPublisherReq{
 		Author:        s,
@@ -166,16 +218,16 @@ func (s *session) onSetup(c *conn, ctx *gortsplib.ServerHandlerOnSetupCtx,
 	switch s.rsession.State() {
 	case gortsplib.ServerSessionStateInitial, gortsplib.ServerSessionStatePrePlay: // play
 		req := defs.PathAccessRequest{
-			Name:  ctx.Path,
-			Query: ctx.Query,
-			IP:    c.ip(),
-			Proto: auth.ProtocolRTSP,
-			ID:    &c.uuid,
+			Name:        ctx.Path,
+			Query:       ctx.Query,
+			Proto:       auth.ProtocolRTSP,
+			ID:          &c.uuid,
+			Credentials: rtsp.Credentials(ctx.Request),
+			IP:          c.ip(),
 			CustomVerifyFunc: func(expectedUser, expectedPass string) bool {
 				return c.rconn.VerifyCredentials(ctx.Request, expectedUser, expectedPass)
 			},
 		}
-		req.FillFromRTSPRequest(ctx.Request)
 
 		path, stream, err := s.pathManager.AddReader(defs.PathAddReaderReq{
 			Author:        s,
@@ -273,21 +325,12 @@ func (s *session) onRecord(_ *gortsplib.ServerHandlerOnRecordCtx) (*base.Respons
 
 	s.stream = stream
 
-	for _, medi := range s.rsession.AnnouncedDescription().Medias {
-		for _, forma := range medi.Formats {
-			cmedi := medi
-			cforma := forma
-
-			s.rsession.OnPacketRTP(cmedi, cforma, func(pkt *rtp.Packet) {
-				pts, ok := s.rsession.PacketPTS2(cmedi, pkt)
-				if !ok {
-					return
-				}
-
-				stream.WriteRTPPacket(cmedi, cforma, pkt, time.Now(), pts)
-			})
-		}
-	}
+	rtsp.ToStream(
+		s.rsession,
+		s.rsession.AnnouncedDescription().Medias,
+		s.path.SafeConf(),
+		stream,
+		s)
 
 	s.mutex.Lock()
 	s.state = gortsplib.ServerSessionStateRecord
@@ -341,18 +384,19 @@ func (s *session) APISourceDescribe() defs.APIPathSourceOrReader {
 }
 
 // onPacketLost is called by rtspServer.
-func (s *session) onPacketLost(ctx *gortsplib.ServerHandlerOnPacketLostCtx) {
-	s.decodeErrLogger.Log(logger.Warn, ctx.Error.Error())
+func (s *session) onPacketsLost(ctx *gortsplib.ServerHandlerOnPacketsLostCtx) {
+	s.packetsLost.Add(ctx.Lost)
 }
 
 // onDecodeError is called by rtspServer.
-func (s *session) onDecodeError(ctx *gortsplib.ServerHandlerOnDecodeErrorCtx) {
-	s.decodeErrLogger.Log(logger.Warn, ctx.Error.Error())
+func (s *session) onDecodeError(_ *gortsplib.ServerHandlerOnDecodeErrorCtx) {
+	s.decodeErrors.Increase()
 }
 
 // onStreamWriteError is called by rtspServer.
-func (s *session) onStreamWriteError(ctx *gortsplib.ServerHandlerOnStreamWriteErrorCtx) {
-	s.writeErrLogger.Log(logger.Warn, ctx.Error.Error())
+func (s *session) onStreamWriteError(_ *gortsplib.ServerHandlerOnStreamWriteErrorCtx) {
+	// currently the only error returned by OnStreamWriteError is ErrServerWriteQueueFull
+	s.discardedFrames.Increase()
 }
 
 func (s *session) apiItem() *defs.APIRTSPSession {

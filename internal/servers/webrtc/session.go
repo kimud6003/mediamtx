@@ -17,10 +17,12 @@ import (
 	pwebrtc "github.com/pion/webrtc/v4"
 
 	"github.com/bluenviron/mediamtx/internal/auth"
+	"github.com/bluenviron/mediamtx/internal/conf"
 	"github.com/bluenviron/mediamtx/internal/defs"
 	"github.com/bluenviron/mediamtx/internal/externalcmd"
 	"github.com/bluenviron/mediamtx/internal/hooks"
 	"github.com/bluenviron/mediamtx/internal/logger"
+	"github.com/bluenviron/mediamtx/internal/protocols/httpp"
 	"github.com/bluenviron/mediamtx/internal/protocols/webrtc"
 	"github.com/bluenviron/mediamtx/internal/stream"
 )
@@ -32,6 +34,12 @@ func whipOffer(body []byte) *pwebrtc.SessionDescription {
 	}
 }
 
+type sessionParent interface {
+	closeSession(sx *session)
+	generateICEServers(clientConfig bool) ([]pwebrtc.ICEServer, error)
+	logger.Writer
+}
+
 type session struct {
 	parentCtx             context.Context
 	ipsFromInterfaces     bool
@@ -39,11 +47,14 @@ type session struct {
 	additionalHosts       []string
 	iceUDPMux             ice.UDPMux
 	iceTCPMux             ice.TCPMux
+	handshakeTimeout      conf.Duration
+	trackGatherTimeout    conf.Duration
+	stunGatherTimeout     conf.Duration
 	req                   webRTCNewSessionReq
 	wg                    *sync.WaitGroup
 	externalCmdPool       *externalcmd.Pool
 	pathManager           serverPathManager
-	parent                *Server
+	parent                sessionParent
 
 	ctx       context.Context
 	ctxCancel func()
@@ -127,13 +138,14 @@ func (s *session) runPublish() (int, error) {
 	ip, _, _ := net.SplitHostPort(s.req.remoteAddr)
 
 	req := defs.PathAccessRequest{
-		Name:    s.req.pathName,
-		Publish: true,
-		IP:      net.ParseIP(ip),
-		Proto:   auth.ProtocolWebRTC,
-		ID:      &s.uuid,
+		Name:        s.req.pathName,
+		Query:       s.req.httpRequest.URL.RawQuery,
+		Publish:     true,
+		Proto:       auth.ProtocolWebRTC,
+		ID:          &s.uuid,
+		Credentials: httpp.Credentials(s.req.httpRequest),
+		IP:          net.ParseIP(ip),
 	}
-	req.FillFromHTTPRequest(s.req.httpRequest)
 
 	path, err := s.pathManager.AddPublisher(defs.PathAddPublisherReq{
 		Author:        s,
@@ -157,10 +169,11 @@ func (s *session) runPublish() (int, error) {
 		IPsFromInterfaces:     s.ipsFromInterfaces,
 		IPsFromInterfacesList: s.ipsFromInterfacesList,
 		AdditionalHosts:       s.additionalHosts,
-		HandshakeTimeout:      s.parent.HandshakeTimeout,
-		TrackGatherTimeout:    s.parent.TrackGatherTimeout,
-		STUNGatherTimeout:     s.parent.STUNGatherTimeout,
+		HandshakeTimeout:      s.handshakeTimeout,
+		TrackGatherTimeout:    s.trackGatherTimeout,
+		STUNGatherTimeout:     s.stunGatherTimeout,
 		Publish:               false,
+		UseAbsoluteTimestamp:  path.SafeConf().UseAbsoluteTimestamp,
 		Log:                   s,
 	}
 	err = pc.Start()
@@ -241,12 +254,13 @@ func (s *session) runRead() (int, error) {
 	ip, _, _ := net.SplitHostPort(s.req.remoteAddr)
 
 	req := defs.PathAccessRequest{
-		Name:  s.req.pathName,
-		IP:    net.ParseIP(ip),
-		Proto: auth.ProtocolWebRTC,
-		ID:    &s.uuid,
+		Name:        s.req.pathName,
+		Query:       s.req.httpRequest.URL.RawQuery,
+		Proto:       auth.ProtocolWebRTC,
+		ID:          &s.uuid,
+		Credentials: httpp.Credentials(s.req.httpRequest),
+		IP:          net.ParseIP(ip),
 	}
-	req.FillFromHTTPRequest(s.req.httpRequest)
 
 	path, stream, err := s.pathManager.AddReader(defs.PathAddReaderReq{
 		Author:        s,
@@ -275,10 +289,11 @@ func (s *session) runRead() (int, error) {
 		IPsFromInterfaces:     s.ipsFromInterfaces,
 		IPsFromInterfacesList: s.ipsFromInterfacesList,
 		AdditionalHosts:       s.additionalHosts,
-		HandshakeTimeout:      s.parent.HandshakeTimeout,
-		TrackGatherTimeout:    s.parent.TrackGatherTimeout,
-		STUNGatherTimeout:     s.parent.STUNGatherTimeout,
+		HandshakeTimeout:      s.handshakeTimeout,
+		TrackGatherTimeout:    s.trackGatherTimeout,
+		STUNGatherTimeout:     s.stunGatherTimeout,
 		Publish:               true,
+		UseAbsoluteTimestamp:  path.SafeConf().UseAbsoluteTimestamp,
 		Log:                   s,
 	}
 

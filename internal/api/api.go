@@ -77,50 +77,9 @@ func recordingsOfPath(
 	return ret
 }
 
-// PathManager contains methods used by the API and Metrics server.
-type PathManager interface {
-	APIPathsList() (*defs.APIPathList, error)
-	APIPathsGet(string) (*defs.APIPath, error)
-}
-
-// HLSServer contains methods used by the API and Metrics server.
-type HLSServer interface {
-	APIMuxersList() (*defs.APIHLSMuxerList, error)
-	APIMuxersGet(string) (*defs.APIHLSMuxer, error)
-}
-
-// RTSPServer contains methods used by the API and Metrics server.
-type RTSPServer interface {
-	APIConnsList() (*defs.APIRTSPConnsList, error)
-	APIConnsGet(uuid.UUID) (*defs.APIRTSPConn, error)
-	APISessionsList() (*defs.APIRTSPSessionList, error)
-	APISessionsGet(uuid.UUID) (*defs.APIRTSPSession, error)
-	APISessionsKick(uuid.UUID) error
-}
-
-// RTMPServer contains methods used by the API and Metrics server.
-type RTMPServer interface {
-	APIConnsList() (*defs.APIRTMPConnList, error)
-	APIConnsGet(uuid.UUID) (*defs.APIRTMPConn, error)
-	APIConnsKick(uuid.UUID) error
-}
-
-// SRTServer contains methods used by the API and Metrics server.
-type SRTServer interface {
-	APIConnsList() (*defs.APISRTConnList, error)
-	APIConnsGet(uuid.UUID) (*defs.APISRTConn, error)
-	APIConnsKick(uuid.UUID) error
-}
-
-// WebRTCServer contains methods used by the API and Metrics server.
-type WebRTCServer interface {
-	APISessionsList() (*defs.APIWebRTCSessionList, error)
-	APISessionsGet(uuid.UUID) (*defs.APIWebRTCSession, error)
-	APISessionsKick(uuid.UUID) error
-}
-
 type apiAuthManager interface {
 	Authenticate(req *auth.Request) error
+	RefreshJWTJWKS()
 }
 
 type apiParent interface {
@@ -139,14 +98,14 @@ type API struct {
 	ReadTimeout    conf.Duration
 	Conf           *conf.Conf
 	AuthManager    apiAuthManager
-	PathManager    PathManager
-	RTSPServer     RTSPServer
-	RTSPSServer    RTSPServer
-	RTMPServer     RTMPServer
-	RTMPSServer    RTMPServer
-	HLSServer      HLSServer
-	WebRTCServer   WebRTCServer
-	SRTServer      SRTServer
+	PathManager    defs.APIPathManager
+	RTSPServer     defs.APIRTSPServer
+	RTSPSServer    defs.APIRTSPServer
+	RTMPServer     defs.APIRTMPServer
+	RTMPSServer    defs.APIRTMPServer
+	HLSServer      defs.APIHLSServer
+	WebRTCServer   defs.APIWebRTCServer
+	SRTServer      defs.APISRTServer
 	Parent         apiParent
 
 	httpServer *httpp.Server
@@ -162,6 +121,8 @@ func (a *API) Initialize() error {
 	router.Use(a.middlewareAuth)
 
 	group := router.Group("/v3")
+
+	group.POST("/auth/jwks/refresh", a.onAuthJwksRefresh)
 
 	group.GET("/config/global/get", a.onConfigGlobalGet)
 	group.PATCH("/config/global/patch", a.onConfigGlobalPatch)
@@ -287,10 +248,11 @@ func (a *API) middlewareOrigin(ctx *gin.Context) {
 
 func (a *API) middlewareAuth(ctx *gin.Context) {
 	req := &auth.Request{
-		IP:     net.ParseIP(ctx.ClientIP()),
-		Action: conf.AuthActionAPI,
+		Action:      conf.AuthActionAPI,
+		Query:       ctx.Request.URL.RawQuery,
+		Credentials: httpp.Credentials(ctx.Request),
+		IP:          net.ParseIP(ctx.ClientIP()),
 	}
-	req.FillFromHTTPRequest(ctx.Request)
 
 	err := a.AuthManager.Authenticate(req)
 	if err != nil {
@@ -575,6 +537,11 @@ func (a *API) onConfigPathsDelete(ctx *gin.Context) {
 	a.Conf = newConf
 	a.Parent.APIConfigSet(newConf)
 
+	ctx.Status(http.StatusOK)
+}
+
+func (a *API) onAuthJwksRefresh(ctx *gin.Context) {
+	a.AuthManager.RefreshJWTJWKS()
 	ctx.Status(http.StatusOK)
 }
 

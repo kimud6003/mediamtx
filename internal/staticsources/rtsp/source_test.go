@@ -44,7 +44,7 @@ func TestSource(t *testing.T) {
 		"tls",
 	} {
 		t.Run(source, func(t *testing.T) {
-			var stream *gortsplib.ServerStream
+			var strm *gortsplib.ServerStream
 
 			nonce, err := auth.GenerateNonce()
 			require.NoError(t, err)
@@ -67,17 +67,17 @@ func TestSource(t *testing.T) {
 
 						return &base.Response{
 							StatusCode: base.StatusOK,
-						}, stream, nil
+						}, strm, nil
 					},
 					onSetup: func(_ *gortsplib.ServerHandlerOnSetupCtx) (*base.Response, *gortsplib.ServerStream, error) {
 						return &base.Response{
 							StatusCode: base.StatusOK,
-						}, stream, nil
+						}, strm, nil
 					},
 					onPlay: func(_ *gortsplib.ServerHandlerOnPlayCtx) (*base.Response, error) {
 						go func() {
 							time.Sleep(100 * time.Millisecond)
-							err2 := stream.WritePacketRTP(media0, &rtp.Packet{
+							err2 := strm.WritePacketRTP(media0, &rtp.Packet{
 								Header: rtp.Header{
 									Version:        0x02,
 									PayloadType:    96,
@@ -126,8 +126,13 @@ func TestSource(t *testing.T) {
 			require.NoError(t, err)
 			defer s.Close()
 
-			stream = gortsplib.NewServerStream(&s, &description.Session{Medias: []*description.Media{media0}})
-			defer stream.Close()
+			strm = &gortsplib.ServerStream{
+				Server: &s,
+				Desc:   &description.Session{Medias: []*description.Media{media0}},
+			}
+			err = strm.Initialize()
+			require.NoError(t, err)
+			defer strm.Close()
 
 			var te *test.SourceTester
 
@@ -173,8 +178,8 @@ func TestSource(t *testing.T) {
 	}
 }
 
-func TestRTSPSourceNoPassword(t *testing.T) {
-	var stream *gortsplib.ServerStream
+func TestSourceNoPassword(t *testing.T) {
+	var strm *gortsplib.ServerStream
 
 	nonce, err := auth.GenerateNonce()
 	require.NoError(t, err)
@@ -196,12 +201,12 @@ func TestRTSPSourceNoPassword(t *testing.T) {
 
 				return &base.Response{
 					StatusCode: base.StatusOK,
-				}, stream, nil
+				}, strm, nil
 			},
 			onSetup: func(_ *gortsplib.ServerHandlerOnSetupCtx) (*base.Response, *gortsplib.ServerStream, error) {
 				go func() {
 					time.Sleep(100 * time.Millisecond)
-					err2 := stream.WritePacketRTP(media0, &rtp.Packet{
+					err2 := strm.WritePacketRTP(media0, &rtp.Packet{
 						Header: rtp.Header{
 							Version:        0x02,
 							PayloadType:    96,
@@ -217,7 +222,7 @@ func TestRTSPSourceNoPassword(t *testing.T) {
 
 				return &base.Response{
 					StatusCode: base.StatusOK,
-				}, stream, nil
+				}, strm, nil
 			},
 			onPlay: func(_ *gortsplib.ServerHandlerOnPlayCtx) (*base.Response, error) {
 				return &base.Response{
@@ -232,8 +237,13 @@ func TestRTSPSourceNoPassword(t *testing.T) {
 	require.NoError(t, err)
 	defer s.Close()
 
-	stream = gortsplib.NewServerStream(&s, &description.Session{Medias: []*description.Media{media0}})
-	defer stream.Close()
+	strm = &gortsplib.ServerStream{
+		Server: &s,
+		Desc:   &description.Session{Medias: []*description.Media{media0}},
+	}
+	err = strm.Initialize()
+	require.NoError(t, err)
+	defer strm.Close()
 
 	var sp conf.RTSPTransport
 	sp.UnmarshalJSON([]byte(`"tcp"`)) //nolint:errcheck
@@ -257,10 +267,10 @@ func TestRTSPSourceNoPassword(t *testing.T) {
 	<-te.Unit
 }
 
-func TestRTSPSourceRange(t *testing.T) {
+func TestSourceRange(t *testing.T) {
 	for _, ca := range []string{"clock", "npt", "smpte"} {
 		t.Run(ca, func(t *testing.T) {
-			var stream *gortsplib.ServerStream
+			var strm *gortsplib.ServerStream
 
 			media0 := test.UniqueMediaH264()
 
@@ -269,12 +279,12 @@ func TestRTSPSourceRange(t *testing.T) {
 					onDescribe: func(_ *gortsplib.ServerHandlerOnDescribeCtx) (*base.Response, *gortsplib.ServerStream, error) {
 						return &base.Response{
 							StatusCode: base.StatusOK,
-						}, stream, nil
+						}, strm, nil
 					},
 					onSetup: func(_ *gortsplib.ServerHandlerOnSetupCtx) (*base.Response, *gortsplib.ServerStream, error) {
 						return &base.Response{
 							StatusCode: base.StatusOK,
-						}, stream, nil
+						}, strm, nil
 					},
 					onPlay: func(ctx *gortsplib.ServerHandlerOnPlayCtx) (*base.Response, error) {
 						switch ca {
@@ -290,7 +300,7 @@ func TestRTSPSourceRange(t *testing.T) {
 
 						go func() {
 							time.Sleep(100 * time.Millisecond)
-							err := stream.WritePacketRTP(media0, &rtp.Packet{
+							err := strm.WritePacketRTP(media0, &rtp.Packet{
 								Header: rtp.Header{
 									Version:        0x02,
 									PayloadType:    96,
@@ -316,8 +326,13 @@ func TestRTSPSourceRange(t *testing.T) {
 			require.NoError(t, err)
 			defer s.Close()
 
-			stream = gortsplib.NewServerStream(&s, &description.Session{Medias: []*description.Media{media0}})
-			defer stream.Close()
+			strm = &gortsplib.ServerStream{
+				Server: &s,
+				Desc:   &description.Session{Medias: []*description.Media{media0}},
+			}
+			err = strm.Initialize()
+			require.NoError(t, err)
+			defer strm.Close()
 
 			cnf := &conf.Path{}
 

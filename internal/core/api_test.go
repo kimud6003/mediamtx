@@ -8,7 +8,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -418,22 +417,33 @@ func TestAPIProtocolListGet(t *testing.T) {
 					port = "1936"
 				}
 
-				u, err := url.Parse("rtmp://127.0.0.1:" + port + "/mypath?key=val")
+				var rawURL string
+
+				if ca == "rtmps" {
+					rawURL = "rtmps://"
+				} else {
+					rawURL = "rtmp://"
+				}
+
+				rawURL += "127.0.0.1:" + port + "/mypath?key=val"
+
+				u, err := url.Parse(rawURL)
 				require.NoError(t, err)
 
-				nconn, err := func() (net.Conn, error) {
-					if ca == "rtmp" {
-						return net.Dial("tcp", u.Host)
-					}
-					return tls.Dial("tcp", u.Host, &tls.Config{InsecureSkipVerify: true})
-				}()
+				conn := &rtmp.Client{
+					URL:       u,
+					TLSConfig: &tls.Config{InsecureSkipVerify: true},
+					Publish:   true,
+				}
+				err = conn.Initialize(context.Background())
 				require.NoError(t, err)
-				defer nconn.Close()
+				defer conn.Close()
 
-				conn, err := rtmp.NewClientConn(nconn, u, true)
-				require.NoError(t, err)
-
-				w, err := rtmp.NewWriter(conn, test.FormatH264, nil)
+				w := &rtmp.Writer{
+					Conn:       conn,
+					VideoTrack: test.FormatH264,
+				}
+				err = w.Initialize()
 				require.NoError(t, err)
 
 				err = w.WriteH264(2*time.Second, 2*time.Second, [][]byte{{5, 2, 3, 4}})
@@ -548,7 +558,8 @@ func TestAPIProtocolListGet(t *testing.T) {
 				}
 
 				bw := bufio.NewWriter(conn)
-				w := mpegts.NewWriter(bw, []*mpegts.Track{track})
+				w := &mpegts.Writer{W: bw, Tracks: []*mpegts.Track{track}}
+				err = w.Initialize()
 				require.NoError(t, err)
 
 				err = w.WriteH264(track, 0, 0, [][]byte{{1}})
@@ -1002,14 +1013,19 @@ func TestAPIProtocolKick(t *testing.T) {
 				u, err := url.Parse("rtmp://localhost:1935/mypath")
 				require.NoError(t, err)
 
-				nconn, err := net.Dial("tcp", u.Host)
+				conn := &rtmp.Client{
+					URL:     u,
+					Publish: true,
+				}
+				err = conn.Initialize(context.Background())
 				require.NoError(t, err)
-				defer nconn.Close()
+				defer conn.Close()
 
-				conn, err := rtmp.NewClientConn(nconn, u, true)
-				require.NoError(t, err)
-
-				w, err := rtmp.NewWriter(conn, test.FormatH264, nil)
+				w := &rtmp.Writer{
+					Conn:       conn,
+					VideoTrack: test.FormatH264,
+				}
+				err = w.Initialize()
 				require.NoError(t, err)
 
 				err = w.WriteH264(2*time.Second, 2*time.Second, [][]byte{{5, 2, 3, 4}})
@@ -1054,7 +1070,8 @@ func TestAPIProtocolKick(t *testing.T) {
 				}
 
 				bw := bufio.NewWriter(conn)
-				w := mpegts.NewWriter(bw, []*mpegts.Track{track})
+				w := &mpegts.Writer{W: bw, Tracks: []*mpegts.Track{track}}
+				err = w.Initialize()
 				require.NoError(t, err)
 
 				err = w.WriteH264(track, 0, 0, [][]byte{{1}})
