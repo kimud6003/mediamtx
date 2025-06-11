@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
+	"path/filepath"
 	"github.com/bluenviron/mediamtx/internal/conf"
 )
 
@@ -112,6 +112,19 @@ type Path struct {
 
 // Decode decodes a Path.
 func (p *Path) Decode(format string, v string) bool {
+	/*
+	** 현재 runOnRecordSegmentComplete를 통해 만드는 video format은 아래와 같음. 해당 파라미터 변경시 아래 전처리 코드 수정 필요  
+	** ./recordings/%path/{비디오 duration}@%Y-%m-%d_%H-%M-%S-%f
+	*/
+	filename := filepath.Base(v)
+	if strings.Contains(filename, "@") {
+		parts := strings.SplitN(filename, "@", 2)
+		if len(parts) == 2 {
+			prefix := parts[0]
+			v = strings.Replace(v, prefix+"@", "", 1)
+		}
+	}
+
 	re := format
 
 	for _, ch := range []uint8{
