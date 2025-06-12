@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -82,6 +83,7 @@ type httpServer struct {
 	readTimeout    conf.Duration
 	pathManager    serverPathManager
 	parent         *Server
+	Conf           *conf.Path
 
 	inner *httpp.Server
 }
@@ -302,6 +304,7 @@ func (s *httpServer) onWHIPDelete(ctx *gin.Context, pathName string, rawSecret s
 }
 
 func (s *httpServer) onPage(ctx *gin.Context, pathName string, publish bool) {
+
 	if !s.checkAuthOutsideSession(ctx, pathName, publish) {
 		return
 	}
@@ -313,7 +316,38 @@ func (s *httpServer) onPage(ctx *gin.Context, pathName string, publish bool) {
 	if publish {
 		ctx.Writer.Write(publishIndex)
 	} else {
-		ctx.Writer.Write(readIndex)
+		conf, err := s.pathManager.FindPathConf(defs.PathFindPathConfReq{
+			AccessRequest: defs.PathAccessRequest{
+				Name:    pathName,
+				Publish: false,
+				IP:      net.ParseIP(ctx.ClientIP()),
+				Proto:   auth.ProtocolWebRTC,
+			},
+		})
+		if err != nil {
+			writeError(ctx, http.StatusInternalServerError, err)
+			return
+		}
+
+		delay := 0
+		if delayStr := ctx.Query("delay"); delayStr != "" {
+			if d, err := strconv.Atoi(delayStr); err == nil {
+				delay = d
+			}
+		}
+
+		effectiveDelay := conf.PiaWebrtcDelay
+		if delay > 0 {
+			effectiveDelay = delay
+		}
+
+		delayScript := fmt.Sprintf(`<script>window.ENV = { DELAY_MS: %d };</script>`, effectiveDelay)
+
+		html := string(readIndex)
+		html = strings.Replace(html, `<script defer src="./reader.js"></script>`,
+			delayScript+`\n<script defer src="./reader.js"></script>`, 1)
+
+		ctx.Writer.Write([]byte(html))
 	}
 }
 

@@ -1,0 +1,47 @@
+# syntax=docker/dockerfile:1.4
+FROM --platform=$BUILDPLATFORM golang:1.23-alpine AS builder
+
+ARG TARGETARCH
+ARG TARGETOS
+
+RUN apk update && apk add --no-cache \
+    bash \
+    git \
+    make \
+    ffmpeg \
+    build-base
+
+WORKDIR /app
+COPY . .
+
+RUN go mod tidy
+RUN go generate ./...
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /app/mediamtx .
+
+# --- Run Stage ---
+FROM --platform=$TARGETOS/$TARGETARCH alpine:latest
+
+ARG TARGETARCH
+RUN apk update && apk add --no-cache \
+    bash \
+    git \
+    make \
+    ffmpeg \
+    build-base \
+    libstdc++ \
+    curl
+
+RUN mkdir -p /root/minio-binaries && \
+    curl -s https://dl.min.io/client/mc/release/linux-${TARGETARCH}/mc \
+    -o /root/minio-binaries/mc && \
+    chmod +x /root/minio-binaries/mc
+
+ENV PATH="/root/minio-binaries:${PATH}"
+
+COPY --from=builder /app/mediamtx /bin/mediamtx
+COPY mediamtx.yml /etc/mediamtx/mediamtx.yml
+COPY rtsp_process.sh /bin/rtsp_process.sh
+RUN chmod 777 /bin/rtsp_process.sh
+
+ENV MTX_RTSPTRANSPORTS=tcp
+ENTRYPOINT ["/bin/mediamtx"]

@@ -215,6 +215,7 @@ type Path struct {
 	RunOnUnread                string   `json:"runOnUnread"`
 	RunOnRecordSegmentCreate   string   `json:"runOnRecordSegmentCreate"`
 	RunOnRecordSegmentComplete string   `json:"runOnRecordSegmentComplete"`
+	PiaWebrtcDelay             int      `json:"piaWebrtcDelay"`
 }
 
 func (pconf *Path) setDefaults() {
@@ -259,6 +260,7 @@ func (pconf *Path) setDefaults() {
 	// Hooks
 	pconf.RunOnDemandStartTimeout = 10 * Duration(time.Second)
 	pconf.RunOnDemandCloseAfter = 10 * Duration(time.Second)
+	pconf.PiaWebrtcDelay = 0
 }
 
 func newPath(defaults *Path, partial *OptionalPath) *Path {

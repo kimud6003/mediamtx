@@ -34,13 +34,15 @@ rm -f ${SMALL_IMAGE}
 
 WIDTH=$(ffprobe -v error -select_streams v:0 -show_entries stream=width -of csv=p=0 "rtsp://localhost:$RTSP_PORT/$RTSP_PATH")
 HEIGHT=$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 "rtsp://localhost:$RTSP_PORT/$RTSP_PATH")
+FPS=$(ffprobe -v error -select_streams v:0 -show_entries stream=r_frame_rate -of csv=p=0 "rtsp://localhost:$RTSP_PORT/$RTSP_PATH" | awk -F/ '{if ($2=="" || $2==0) print $1; else printf "%.2f", $1/$2}')
 
 curl -X PATCH ${CRON_SERVER_HOST}/thumbnail/${CAMERA_ID} \
     -H "Content-Type: application/json" \
     -d "$(echo "{
         \"organization\": \"${ORGANIZATION}\",
         \"width\": \"${WIDTH}\",
-        \"height\": \"${HEIGHT}\"
+        \"height\": \"${HEIGHT}\",
+        \"fps\" : \"${FPS}\"
     }")"
 
 curl -X POST ${API_SERVER_ENDPOINT} \
