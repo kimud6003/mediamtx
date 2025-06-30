@@ -308,7 +308,7 @@ func (a *API) handleThumbnailUpload(ctx *gin.Context) {
 
 	// TODO: Path랑 Port는 환경변수가 없어서 api server 단에서 수정 필요
 	// TODO: rtspHost는 localhost로 변경 필요
-	const rtspHost = "172.168.47.35"
+	const rtspHost = "127.0.0.1"
 	// FFmpeg 명령어 실행
 	cmd := exec.Command("bash", "-c", fmt.Sprintf(`ffmpeg -y -i "rtsp://%s:%d/%s" -vf scale=%s -vframes 1 %s && ffmpeg -y -i "rtsp://%s:%d/%s" -vf scale=%s -vframes 1 %s`,
 		rtspHost, req.RTSPPort, req.RTSPPath, req.CameraRoiDefaultSize, req.FHDImage,
