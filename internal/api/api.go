@@ -383,34 +383,35 @@ func (a *API) handleThumbnailUpload(ctx *gin.Context) {
 
 	a.Log(logger.Info, "Request to Cron server for updating metadata successfully in camera=%s", req.CameraID)
 
-	streamPayload := fmt.Sprintf(`{
+	ctx.JSON(http.StatusOK, gin.H{"status": "thumbnail captured and uploaded"})
+
+	go func() {
+		streamPayload := fmt.Sprintf(`{
 		"organization": "%s",
 		"cameraId": %s,
 		"streamId": "%s",
 		"filesystemId": %s
-	}`, req.Organization, req.CameraID, req.VideoID, req.FilesystemID)
+		}`, req.Organization, req.CameraID, req.VideoID, req.FilesystemID)
 
-	resp2, err := http.Post(
-		req.APIServerEndpoint,
-		"application/json",
-		bytes.NewBufferString(streamPayload),
-	)
-	if err != nil {
-		a.writeError(ctx, http.StatusInternalServerError, fmt.Errorf("Metadata post error: %v", err))
-		return
-	}
-	defer resp2.Body.Close()
+		resp2, err := http.Post(
+			req.APIServerEndpoint,
+			"application/json",
+			bytes.NewBufferString(streamPayload),
+		)
+		if err != nil {
+			a.Log(logger.Error, "Metadata post error: %v", err)
+			return
+		}
+		defer resp2.Body.Close()
 
-	if resp2.StatusCode < 200 || resp2.StatusCode >= 300 {
-		bodyBytes, _ := io.ReadAll(resp2.Body)
-		a.writeError(ctx, http.StatusBadGateway, fmt.Errorf(
-			"API server returned %d: %s", resp2.StatusCode, string(bodyBytes),
-		))
-		return
-	}
+		if resp2.StatusCode < 200 || resp2.StatusCode >= 300 {
+			bodyBytes, _ := io.ReadAll(resp2.Body)
+			a.Log(logger.Error, "API server returned %d: %s", resp2.StatusCode, string(bodyBytes))
+			return
+		}
 
-	a.Log(logger.Info, "Request to Api server for request AI Server successfully in camera=%s", req.CameraID)
-	ctx.JSON(http.StatusOK, gin.H{"status": "thumbnail captured and uploaded"})
+		a.Log(logger.Info, "Request to API server for AI inference successful. camera=%s", req.CameraID)
+	}()
 }
 
 func probeValue(ctx *gin.Context, port int, path, key string) string {
